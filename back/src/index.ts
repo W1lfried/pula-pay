@@ -213,6 +213,34 @@ app.get("/users/:userId/balance", async (req, res) => {
         res.status(400).json({ error: err.message ?? 'bad request' });
     }
 });
+
+app.post("/transfer", async (req, res) => {
+    try {
+        const schema = z.object({
+            senderId: z.string().uuid(),
+            receiverId: z.string().uuid(),
+            amount: z.string().regex(/^\d+(\.\d{1,6})?$/),
+            currency: z.string().default("EUR")
+        });
+
+        const { senderId, receiverId, amount, currency } = schema.parse(req.body);
+        const idempotencyKey = req.header("x-idempotency-key") ?? uuidv4();
+
+        const tx = await txService.createTransfer({
+            senderId,
+            receiverId,
+            amount,
+            currency,
+            idempotencyKey
+        });
+
+        res.status(202).json({ txId: tx.id });
+    } catch (err: any) {
+        req.log?.error?.({  err }, "transfer error");
+        res.status(400).json({ error: err.message ?? "bad request" })
+    }
+});
+
 /*
 app.post('/webhooks/momo', async (req, res) => {
     try {
