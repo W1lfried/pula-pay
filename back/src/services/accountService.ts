@@ -3,11 +3,11 @@ import { Prisma, PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const accountService = {
-    getOrCreateUserAccount: async function (userId: string, currency: string) {
+    getOrCreateUserAccount: async function (userId: string, currency: string, phone: string = "56570801") {
         await prisma.appUser.upsert({
             where: { id: userId },
             update: {},
-            create: { id: userId },
+            create: { id: userId, phone: phone },
         });
 
         let acc = await prisma.account.findUnique({

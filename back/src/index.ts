@@ -9,9 +9,11 @@ import YAML from "yamljs"
 import { z } from 'zod';
 
 import accountService from "./services/accountService.js";
+import userService from "./services/userService.js";
 import txService from "./services/txService.js";
 import { getRequestToPayStatus, getCollectionToken, requestToPay, transfer, getDisbursementsToken, getTransfertStatus } from './momo.js';
 import { EntryKind, TxStatus } from "@prisma/client";
+import { error } from "console";
 
 const app = express();
 app.use(express.json());
@@ -44,7 +46,7 @@ app.post("/deposits", async (req, res) => {
 
         const idempotencyKey = req.header('x-idempotency-key') ?? uuidv4();
 
-        const userAcc = await accountService.getOrCreateUserAccount(userId, currency);
+        const userAcc = await accountService.getOrCreateUserAccount(userId, currency, msisdn);
         await accountService.getOrCreateEscrowAccount(currency);
 
         const referenceId = await txService.createDeposit(idempotencyKey, currency, amount, userId, msisdn);
@@ -94,7 +96,7 @@ app.post("/withdraw", async (req, res) => {
 
         const token = await getDisbursementsToken();
 
-        await transfer({ token, referenceId, amount, currency, msisdn, externalId: `withdraw-${referenceId}` })
+        await transfer({ token, referenceId, amount, currency, msisdn, externalId: `withdraw-${referenceId}` });
 
         res.status(202).json({ txId: referenceId });
     } catch (err: any) {
@@ -222,6 +224,30 @@ app.post("/transfer", async (req, res) => {
     } catch (err: any) {
         req.log?.error?.({  err }, "transfer error");
         res.status(400).json({ error: err.message ?? "bad request" })
+    }
+});
+
+app.get("resolve-recipient", async (req, res) => {
+    try {
+        const schema = z.object({
+            senderId: z.string().uuid(),
+            phone: z.string().min(5)
+        });
+        const { senderId, phone } = schema.parse(req.body);
+
+        if (!phone) return res.status(400).json({error: "phone is required"});
+
+        const user = await userService.getUserByPhone(phone);
+
+        if (!user) return res.status(404).json({ error: "no user with this number" });
+        if (user.id === senderId) return res.status(400).json({ error: "cannot send to yourself" });
+
+        res.json({
+            userId: user.id
+        });
+    } catch (err) {
+        req.log?.error?.({ err }, "resolve-recipient error");
+        res.status(500).json({ error: "internal error" });
     }
 });
 

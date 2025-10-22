@@ -35,7 +35,7 @@ const txService = {
     createTransfer: async function ({ senderId, receiverId, amount, currency, idempotencyKey } : 
         { senderId: string, receiverId: string, amount: string, currency: string, idempotencyKey: string }) {
         const existing = await prisma.tx.findUnique({ where: { idempotencyKey } }).catch(() => null);
-        if (existing) return existing;
+        if (existing) throw new Error("Existing idempotencyKey");
 
         const [senderAcc, receiverAcc] = await Promise.all([
             prisma.account.findFirst({ where: { userId: senderId, currency } }),
