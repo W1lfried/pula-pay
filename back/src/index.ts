@@ -227,25 +227,31 @@ app.post("/transfer", async (req, res) => {
     }
 });
 
-app.get("resolve-recipient", async (req, res) => {
+app.get("/resolve-recipient", async (req, res) => {
     try {
         const schema = z.object({
             senderId: z.string().uuid(),
             phone: z.string().min(5)
         });
-        const { senderId, phone } = schema.parse(req.body);
-
-        if (!phone) return res.status(400).json({error: "phone is required"});
+        const { senderId, phone } = schema.parse(req.query);
 
         const user = await userService.getUserByPhone(phone);
 
-        if (!user) return res.status(404).json({ error: "no user with this number" });
-        if (user.id === senderId) return res.status(400).json({ error: "cannot send to yourself" });
+        if (!user) {
+            return res.status(404).json({ error: "no user with this number" });
+        }
+
+        if (user.id === senderId) {
+            return res.status(400).json({ error: "cannot send to yourself" })
+        };
 
         res.json({
             userId: user.id
         });
     } catch (err) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: "Invalid input" });
+        }
         req.log?.error?.({ err }, "resolve-recipient error");
         res.status(500).json({ error: "internal error" });
     }

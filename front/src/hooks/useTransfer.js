@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createDeposit, getTxStatus } from "@/lib/momo";
+import { createTransfer, getTxStatus } from "@/lib/momo";
 
-export function useDeposit() {
+export function useTransfer() {
     const [txId, setTxId] = useState(null);
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const timer = useRef(null);
 
-    const startDeposit = useCallback(async (payload) => {
+    const startTransfer = useCallback(async (payload) => {
         setError(null);
         setLoading(true);
         setStatus("PENDING");
         try {
-            const { txId } = await createDeposit(payload);
+            const { txId } = await createTransfer(payload);
             setTxId(txId);
         } catch (e) {
-            setError(e?.response?.data?.error || e.message || "Failed to create deposit");
+            setError(e?.response?.data?.error || e.message || "Failed to create transfer");
             setStatus(null);
         } finally {
             setLoading(false);
@@ -42,5 +42,5 @@ export function useDeposit() {
         };
     }, [txId]);
 
-    return { txId, status, loading, error, startDeposit };
+    return { txId, status, loading, error, startTransfer };
 };
