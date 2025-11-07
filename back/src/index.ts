@@ -1,5 +1,7 @@
+import bcrypt from "bcrypt";
 import cors from "cors";
-import express from 'express';
+import express, { NextFunction } from 'express';
+import jwt from "jsonwebtoken";
 import pino from 'pino';
 import { pinoHttp } from 'pino-http';
 import { Prisma } from "@prisma/client";
@@ -13,7 +15,7 @@ import userService from "./services/userService.js";
 import txService from "./services/txService.js";
 import { getRequestToPayStatus, getCollectionToken, requestToPay, transfer, getDisbursementsToken, getTransfertStatus } from './momo.js';
 import { EntryKind, TxStatus } from "@prisma/client";
-import { error } from "console";
+import verifyAuth from "./middleware/verifyAuth.js";
 
 const app = express();
 app.use(express.json());
@@ -176,8 +178,8 @@ app.get("/transactions/:txId", async (req, res) => {
         if (err instanceof z.ZodError) {
             return res.status(400).json({ error: 'Invalid transaction ID' });
         }
-        
-        res.status(500).json({ 
+
+        res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
@@ -222,7 +224,7 @@ app.post("/transfer", async (req, res) => {
 
         res.status(202).json({ txId: tx.id });
     } catch (err: any) {
-        req.log?.error?.({  err }, "transfer error");
+        req.log?.error?.({ err }, "transfer error");
         res.status(400).json({ error: err.message ?? "bad request" })
     }
 });
@@ -256,6 +258,118 @@ app.get("/resolve-recipient", async (req, res) => {
         res.status(500).json({ error: "internal error" });
     }
 });
+
+app.post("/auth/register", async (req, res) => {
+    try {
+        const schema = z.object({
+            phone: z.string().regex(/^\+?\d{7,15}$/),
+            password: z.string()
+        })
+        const { phone, password } = schema.parse(req.body);
+
+        const hashed = await bcrypt.hash(password, 10);
+
+        const user = await userService.createUser(phone, hashed);
+
+        const otp = (process.env.NODE_ENV === 'production') ? "000000" : Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        await userService.addOtp(phone, otp, otpExpiresAt);
+
+        console.log(`OTP pour ${phone}: ${otp}`); //TO DO: send by sms
+
+        res.status(202).json({ userId: user.id });
+
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: "Invalid input" });
+        }
+        req.log?.error?.({ err }, "register error");
+        res.status(500).json({ error: "internal error" });
+    }
+});
+
+app.post("/auth/verify", async (req, res) => {
+    try {
+        const schema = z.object({
+            phone: z.string().regex(/^\+?\d{7,15}$/),
+            otp: z.string().length(6)
+        })
+        const { phone, otp } = schema.parse(req.body);
+
+        const user = await userService.getUserByPhone(phone);
+
+        if (!user) throw new Error("Utilisateur inconnu");
+
+        if (user.isVerified) return res.status(400).json({ error: "Déjà vérifié" });
+
+        if (new Date() > user.otpExpiresAt!) {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+            await userService.addOtp(phone, otp, otpExpiresAt);
+
+            console.log(`OTP pour ${phone}: ${otp}`);
+
+            return res.status(400).json({ error: "Code OTP expiré, un nouveau a été envoyé" });
+        }
+        if (user.otpCode !== otp) {
+            throw new Error("Code OTP invalide ou expiré");
+        }
+
+        await userService.verifiedUser(phone);
+        res.status(202).json({ verified: true, message: "Vérification réussie" });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: "Invalid input" });
+        }
+        req.log?.error?.({ err }, "verification error");
+        res.status(500).json({ error: "internal error" });
+    }
+});
+
+app.post("/auth/login", async (req, res) => {
+    try {
+        const schema = z.object({
+            phone: z.string().regex(/^\+?\d{7,15}$/),
+            password: z.string()
+        })
+
+        const { phone, password } = schema.parse(req.body);
+
+        const user = await userService.getUserByPhone(phone);
+
+        if (!user) return res.status(401).json({ error: "Utilisateur inconnu" });
+
+        if (!user.isVerified) return res.status(402).json({ error: "Utilisateur non vérifié" });
+
+        if (!await bcrypt.compare(password, user.passwordHash!)) return res.status(403).json({ error: "Mauvais identifiants" });
+
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+        res.status(202).json({ token });
+    } catch (err) {
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: "Invalid input" });
+        }
+        req.log?.error?.({ err }, "verification error");
+        res.status(500).json({ error: "internal error" });
+    }
+});
+
+app.get("/me", verifyAuth, async (req, res) => {
+    try {
+        if (req.user) {
+            const user = userService.getUserById(req.user.id);
+            return res.status(202).json(user);
+        }
+        throw new Error("Missing user id");
+        
+    } catch (err) {
+        req.log?.error?.({ err }, "verification error");
+        res.status(500).json({ error: "internal error" });
+    }
+});
+
 
 /*
 app.post('/webhooks/momo', async (req, res) => {

@@ -8,12 +8,16 @@ datasource db {
 }
 
 model AppUser {
-  id        String    @id @default(uuid())
-  createdAt DateTime  @default(now())
-  kycLevel  Int       @default(0)
-  email     String?   @unique
-  phone     String    @unique
-  accounts  Account[]
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now())
+  kycLevel      Int       @default(0)
+  email         String?   @unique
+  phone         String    @unique
+  passwordHash  String?
+  isVerified    Boolean   @default(false)
+  otpCode       String?
+  otpExpiresAt  DateTime?
+  accounts      Account[]
 }
 
 model Account {

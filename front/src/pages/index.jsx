@@ -32,42 +32,33 @@ import Receipts from "./Receipts";
 
 import Profile from "./Profile";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import Register from "./Register.jsx";
+
+import Login from "./Login.jsx";
+
+import ProtectedRoute from "../components/common/ProtectedRoute";
+
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
 const PAGES = {
-
+    Login: Login,
+    Register: Register,
     Dashboard: Dashboard,
-
     Assistant: Assistant,
-
     Recharge: Recharge,
-
     Internet: Internet,
-
     Transfer: Transfer,
-
     Bills: Bills,
-
     TopUp: TopUp,
-
     Transactions: Transactions,
-
     Wallet: Wallet,
-
     P2PTransfer: P2PTransfer,
-
     Withdraw: Withdraw,
-
     Analysis: Analysis,
-
     Statistics: Statistics,
-
     Contacts: Contacts,
-
     Receipts: Receipts,
-
     Profile: Profile,
-
 }
 
 function _getCurrentPage(url) {
@@ -91,40 +82,111 @@ function PagesContent() {
     return (
         <Layout currentPageName={currentPage}>
             <Routes>
+                <Route path="/" element={
+                    localStorage.getItem('authToken')
+                        ? <Navigate to="/dashboard" replace />
+                        : <Navigate to="/login" replace />
+                } />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Dashboard" element={<Dashboard />} />
+                <Route path="/assistant" element={
+                    <ProtectedRoute>
+                        <Assistant />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Assistant" element={<Assistant />} />
+                <Route path="/recharge" element={
+                    <ProtectedRoute>
+                        <Recharge />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Recharge" element={<Recharge />} />
+                <Route path="/internet" element={
+                    <ProtectedRoute>
+                        <Internet />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Internet" element={<Internet />} />
+                <Route path="/transfer" element={
+                    <ProtectedRoute>
+                        <Transfer />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Transfer" element={<Transfer />} />
+                <Route path="/bills" element={
+                    <ProtectedRoute>
+                        <Bills />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Bills" element={<Bills />} />
+                <Route path="/topup" element={
+                    <ProtectedRoute>
+                        <TopUp />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/TopUp" element={<TopUp />} />
+                <Route path="/transactions" element={
+                    <ProtectedRoute>
+                        <Transactions />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Transactions" element={<Transactions />} />
+                <Route path="/wallet" element={
+                    <ProtectedRoute>
+                        <Wallet />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Wallet" element={<Wallet />} />
+                <Route path="/p2ptransfer" element={
+                    <ProtectedRoute>
+                        <P2PTransfer />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/P2PTransfer" element={<P2PTransfer />} />
+                <Route path="/withdraw" element={
+                    <ProtectedRoute>
+                        <Withdraw />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Withdraw" element={<Withdraw />} />
+                <Route path="/analysis" element={
+                    <ProtectedRoute>
+                        <Analysis />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Analysis" element={<Analysis />} />
+                <Route path="/statistics" element={
+                    <ProtectedRoute>
+                        <Statistics />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Statistics" element={<Statistics />} />
+                <Route path="/contacts" element={
+                    <ProtectedRoute>
+                        <Contacts />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Contacts" element={<Contacts />} />
+                <Route path="/receipts" element={
+                    <ProtectedRoute>
+                        <Receipts />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Receipts" element={<Receipts />} />
+                <Route path="/profile" element={
+                    <ProtectedRoute>
+                        <Profile />
+                    </ProtectedRoute>
+                } />
 
-                <Route path="/Profile" element={<Profile />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
 
             </Routes>
         </Layout>
