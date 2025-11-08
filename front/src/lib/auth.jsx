@@ -14,3 +14,7 @@ export async function verifyPhone(req) {
     const { data } = await api.post("/auth/verify", req);
     return data;
 }
+
+export async function me(params) {
+    
+}

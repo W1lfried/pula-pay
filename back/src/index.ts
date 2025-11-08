@@ -19,7 +19,7 @@ import verifyAuth from "./middleware/verifyAuth.js";
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5173" }))
+app.use(cors({ origin: "http://localhost:5173" })); //CODE SMELL
 const port = process.env.PORT || 3000;
 
 // Swagger setup
