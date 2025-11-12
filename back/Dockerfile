@@ -7,10 +7,11 @@ RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
-COPY . .
 
 RUN npx prisma generate
+RUN npx prisma migrate deploy
 
+COPY . .
 RUN npm run build
 
 EXPOSE 3000
