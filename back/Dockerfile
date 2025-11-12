@@ -9,7 +9,6 @@ COPY prisma ./prisma/
 RUN npm ci
 
 RUN npx prisma generate
-RUN npx prisma migrate deploy
 
 COPY . .
 RUN npm run build
