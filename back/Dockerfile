@@ -27,6 +27,8 @@ COPY tsconfig.json ./
 # Build TypeScript -> dist/
 RUN npm run build
 
+# Copy swagger
+COPY src/docs ./dist/docs
 
 ###############################################################################
 # RUNNER
